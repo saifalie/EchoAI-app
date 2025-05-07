@@ -16,5 +16,7 @@ export default function RootLayout() {
       'modal',
       headerTitle:''
     }}/>
+        <Stack.Screen name="interview" options={{ headerShown: false }} />
+        <Stack.Screen name="questions-preaparing" options={{ headerShown: false }} />
   </Stack>;
 }

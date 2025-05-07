@@ -1,5 +1,6 @@
 // app/(tabs)/selection.tsx
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -20,6 +21,7 @@ const questionTypes = [
 ];
 
 export default function SelectionScreen() {
+    const router = useRouter()
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedQuestionType, setSelectedQuestionType] = useState<string | null>(null);
@@ -28,6 +30,18 @@ export default function SelectionScreen() {
 
   const companies = showMoreCompanies ? [...initialCompanies, ...moreCompanies] : initialCompanies;
   const roles = showMoreRoles ? [...initialRoles, ...moreRoles] : initialRoles;
+
+
+  const onProceed = () =>{
+    router.replace({
+        pathname: '/questions-preparing',
+        params: {
+          company: selectedCompany!,
+          role: selectedRole!,
+          questionType: selectedQuestionType!
+        }
+      });
+  }
 
   useEffect(() => {
     if (selectedCompany && !companies.includes(selectedCompany)) {
@@ -116,7 +130,7 @@ export default function SelectionScreen() {
         <TouchableOpacity
           style={[styles.nextButton, !(selectedCompany && selectedRole && selectedQuestionType) && styles.nextDisabled]}
           disabled={!(selectedCompany && selectedRole && selectedQuestionType)}
-          onPress={() => console.log('Proceed', selectedCompany, selectedRole, selectedQuestionType)}
+          onPress={onProceed}
         >
           <Text style={styles.nextText}>Next</Text>
         </TouchableOpacity>

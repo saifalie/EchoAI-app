@@ -64,7 +64,9 @@ export default function HomeScreen() {
 
         {/* Option Cards */}
         {options.map(o => (
-          <TouchableOpacity key={o.key} style={styles.optionCard}>
+          <TouchableOpacity
+          onPress={()=>router.push('/review')}
+          key={o.key} style={styles.optionCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.optionTitle}>{o.title}</Text>
               <Text style={styles.optionSubtitle}>{o.subtitle}</Text>
