@@ -18,5 +18,6 @@ export default function RootLayout() {
     }}/>
         <Stack.Screen name="interview" options={{ headerShown: false }} />
         <Stack.Screen name="questions-preaparing" options={{ headerShown: false }} />
+        <Stack.Screen name="review" options={{ headerShown: false }} />
   </Stack>;
 }

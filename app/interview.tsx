@@ -149,6 +149,9 @@ export default function QuestionsScreen() {
             { text: 'OK', onPress: () => router.replace('/review') },
           ]);
 
+          console.log('formdata:',formData);
+          
+
 
 
             
