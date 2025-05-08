@@ -1,15 +1,32 @@
 // app/(tabs)/index.tsx
+
+import { useUserStore } from '../../store/userStore';
+
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
 export default function HomeScreen() {
   const router = useRouter();
   const [hasResume, setHasResume] = useState<boolean>(true);
+  const user =  useUserStore((state) =>state.user)
 
 
+  useEffect( ()=>{
+    getData()
+    
+  })
+  const getData = async() =>{
+    const userId = await AsyncStorage.getItem('userId')
+    console.log('userid',userId);
+    console.log('usermain',user);
+    
+  
+    
+  }
 
   const onStartInterview = () => {
     if (hasResume) {
@@ -30,7 +47,7 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.container}>
         {/* Header */}
         <View style={styles.headerRow}>
-          <Text style={styles.greeting}>Hey! Saif 🎉</Text>
+          <Text style={styles.greeting}>Hey! {user?.username} 🎉</Text>
           <View style={styles.pointsBox}>
             <Ionicons name="flash" size={18} color="#444" />
             <Text style={styles.pointsText}>458</Text>

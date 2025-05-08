@@ -1,49 +1,50 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import {
-    Alert,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import apiRequest from '../services/apiServices';
 import { useUserStore } from '../store/userStore';
 
-const Login: React.FC = () => {
+const Register: React.FC = () => {
   const router = useRouter();
   const setUser = useUserStore((state) => state.setUser);
 
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     try {
       const response: any = await apiRequest({
         method: 'post',
-        url: '/auth/login',
-        data: { email, password },
+        url: '/auth/register',
+        data: { username, email, password },
       });
-
       const userPayload = response.data;
-      console.log('userPayload', userPayload);
 
       await AsyncStorage.setItem('userId', userPayload._id);
       setUser(userPayload);
       router.replace('/(tabs)');
     } catch (error: any) {
-      console.log('login failed error', error);
-      const msg = error?.response?.data?.message || 'Login failed';
+      console.log('register failed error', error);
+      const msg = error?.response?.data?.message || 'Registration failed';
       Alert.alert('Error', msg);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+      <Text style={styles.title}>Register</Text>
       <View style={styles.form}>
+        <TextInput
+          style={styles.input}
+          placeholder="Username"
+          placeholderTextColor="#888"
+          autoCapitalize="none"
+          value={username}
+          onChangeText={setUsername}
+        />
+
         <TextInput
           style={styles.input}
           placeholder="Email"
@@ -63,19 +64,19 @@ const Login: React.FC = () => {
           onChangeText={setPassword}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
+        <TouchableOpacity style={styles.button} onPress={handleRegister}>
+          <Text style={styles.buttonText}>Sign Up</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => router.push('/register')}>
-          <Text style={styles.linkText}>Don't have an account? Register</Text>
+        <TouchableOpacity onPress={() => router.push('/login')}>
+          <Text style={styles.linkText}>Already have an account? Login</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-export default Login;
+export default Register;
 
 const styles = StyleSheet.create({
   container: {
@@ -102,7 +103,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   button: {
-    backgroundColor: '#007BFF',
+    backgroundColor: '#28a745',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',

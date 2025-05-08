@@ -1,56 +1,81 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { createJSONStorage, persist } from 'zustand/middleware';
 
-// Define the User type
-interface User {
-  _id?: string;
-  username?: string;
-  email?: string;
-  [key: string]: any;
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  // …whatever other fields your User model has
 }
 
-// Define the store state and actions
-interface UserState {
-  // State
+type State = {
   user: User | null;
-  isAuthenticated: boolean;
+  setUser: (user: User) => void;
+  clearUser: () => void;
+};
+
+export const useUserStore = create<State>((set:any) => ({
+  user: null,
+  setUser: (user:any) => set({ user }),
+  clearUser: () => set({ user: null }),
+}));
+
+
+
+
+
+// import AsyncStorage from '@react-native-async-storage/async-storage';
+// import { create } from 'zustand';
+// import { createJSONStorage, persist } from 'zustand/middleware';
+
+// // Define the User type
+// interface User {
+//   _id?: string;
+//   username?: string;
+//   email?: string;
+//   [key: string]: any;
+// }
+
+// // Define the store state and actions
+// interface UserState {
+//   // State
+//   user: User | null;
+//   isAuthenticated: boolean;
   
-  // Actions
-  setUser: (user: User | null) => void;
-  login: (userData: User) => void;
-  logout: () => void;
-}
+//   // Actions
+//   setUser: (user: User | null) => void;
+//   login: (userData: User) => void;
+//   logout: () => void;
+// }
 
-// Create the store with persistence for React Native
-const useUserStore = create<UserState>()(
-  persist(
-    (set) => ({
-      // Initial state
-      user: null,
-      isAuthenticated: false,
+// // Create the store with persistence for React Native
+// const useUserStore = create<UserState>()(
+//   persist(
+//     (set) => ({
+//       // Initial state
+//       user: null,
+//       isAuthenticated: false,
       
-      // Actions
-      setUser: (user) => set({ 
-        user,
-        isAuthenticated: !!user 
-      }),
+//       // Actions
+//       setUser: (user) => set({ 
+//         user,
+//         isAuthenticated: !!user 
+//       }),
       
-      login: (userData) => set({ 
-        user: userData,
-        isAuthenticated: true 
-      }),
+//       login: (userData) => set({ 
+//         user: userData,
+//         isAuthenticated: true 
+//       }),
       
-      logout: () => set({ 
-        user: null,
-        isAuthenticated: false 
-      }),
-    }),
-    {
-      name: 'user-storage',
-      storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
-);
+//       logout: () => set({ 
+//         user: null,
+//         isAuthenticated: false 
+//       }),
+//     }),
+//     {
+//       name: 'user-storage',
+//       storage: createJSONStorage(() => AsyncStorage),
+//     }
+//   )
+// );
 
-export default useUserStore;
+// export default useUserStore;
