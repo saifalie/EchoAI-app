@@ -13,7 +13,7 @@ export default function HomeScreen() {
   
 
   const onStartInterview = () => {
-    router.push(hasResume ? '/selection' : '/resume-uploader');
+    router.push('/selection');
   };
 
   return (

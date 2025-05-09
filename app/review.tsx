@@ -1,4 +1,5 @@
 import { MaterialIcons } from '@expo/vector-icons'
+import { useLocalSearchParams } from 'expo-router'
 import React, { useState } from 'react'
 import {
     SafeAreaView,
@@ -37,11 +38,32 @@ const questions = [
 ]
 
 const ReviewScreen = () => {
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null)
+  const { data } = useLocalSearchParams();
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  
+  // Parse the data correctly and get the reviews array
+  const parsedData = JSON.parse(Array.isArray(data) ? data[0] : data);
+  const reviews = parsedData.reviews;
 
   const toggleExpand = (index: number) => {
-    setExpandedIndex(expandedIndex === index ? null : index)
-  }
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
+
+  // Calculate average rating - now with proper null checks
+  const averageRating = reviews?.reduce((acc: number, curr: any) => {
+    const rating = parseInt(curr.rating.split('/')[0]);
+    return acc + rating;
+  }, 0) / (reviews?.length || 1);
+
+  // Get overall sentiment based on average rating
+  const getSentiment = (rating: number) => {
+    if (rating >= 8) return { emoji: "😊 🌟 💪 💯", label: "Excellent" };
+    if (rating >= 6) return { emoji: "🙂 👍 💪", label: "Good" };
+    if (rating >= 4) return { emoji: "😐 💭 📝", label: "Needs Improvement" };
+    return { emoji: "😅 📚 💡", label: "Requires Attention" };
+  };
+  
+  const sentiment = getSentiment(averageRating);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -52,57 +74,27 @@ const ReviewScreen = () => {
 
       {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Feedback */}
-        <View style={styles.sectionBoxBlue}>
-          <Text style={styles.sectionTitle}>Overall Feedback</Text>
-          <Text style={styles.text}>
-            The candidate demonstrates adequate technical skills with significant experience in Flutter development, but lacks depth in some critical areas necessary for advanced software architecture and design.
-          </Text>
-        </View>
-
         {/* Score and Sentiment */}
         <View style={styles.row}>
           <View style={[styles.card, styles.scoreCard]}>
             <Text style={styles.cardTitle}>Overall Score</Text>
-            <Text style={styles.scoreValue}>75/100</Text>
-            <Text style={styles.scoreLabel}>Excellent</Text>
+            <Text style={styles.scoreValue}>{Math.round(averageRating)}/10</Text>
+            <Text style={styles.scoreLabel}>{sentiment.label}</Text>
           </View>
           <View style={[styles.card, styles.sentimentCard]}>
             <Text style={styles.cardTitle}>Overall Sentiment</Text>
-            <Text style={styles.emojiRow}>😅 🙂 👍 💯</Text>
-            <Text style={styles.scoreLabel}>OK</Text>
+            <Text style={styles.emojiRow}>{sentiment.emoji}</Text>
+            <Text style={styles.scoreLabel}>{sentiment.label}</Text>
           </View>
-        </View>
-
-        {/* Strengths */}
-        <View style={styles.sectionBoxGreen}>
-          <Text style={styles.sectionTitle}>Areas of Strength</Text>
-          {strengths.map((point, index) => (
-            <View key={index} style={styles.bulletRow}>
-              <MaterialIcons name="check-circle" size={18} color="#28a745" />
-              <Text style={styles.bulletText}>{point}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Improvements */}
-        <View style={styles.sectionBoxRed}>
-          <Text style={styles.sectionTitle}>Areas to Improve</Text>
-          {improvements.map((point, index) => (
-            <View key={index} style={styles.bulletRow}>
-              <MaterialIcons name="cancel" size={18} color="#dc3545" />
-              <Text style={styles.bulletText}>{point}</Text>
-            </View>
-          ))}
         </View>
 
         {/* Questions with Answer & Feedback */}
         <View style={styles.sectionBox}>
           <Text style={styles.sectionTitle}>Questions with Evaluation</Text>
-          {questions.map((q, index) => (
+          {reviews.map((review: any, index: number) => (
             <View key={index} style={styles.questionBox}>
               <TouchableOpacity onPress={() => toggleExpand(index)} style={styles.questionRow}>
-                <Text style={styles.question}>Q{index + 1}. {q.question}</Text>
+                <Text style={styles.question}>Q{index + 1}. {review.question}</Text>
                 <MaterialIcons
                   name={expandedIndex === index ? 'expand-less' : 'expand-more'}
                   size={22}
@@ -111,10 +103,12 @@ const ReviewScreen = () => {
               </TouchableOpacity>
               {expandedIndex === index && (
                 <View style={styles.answerBox}>
-                  <Text style={styles.answerLabel}>Answer:</Text>
-                  <Text style={styles.answerText}>{q.answer}</Text>
-                  <Text style={styles.answerLabel}>Feedback:</Text>
-                  <Text style={styles.answerText}>{q.feedback}</Text>
+                  <Text style={styles.answerLabel}>Analysis:</Text>
+                  <Text style={styles.answerText}>{review.analysis}</Text>
+                  <Text style={styles.answerLabel}>Rating:</Text>
+                  <Text style={styles.answerText}>{review.rating}</Text>
+                  <Text style={styles.answerLabel}>Suggestions:</Text>
+                  <Text style={styles.answerText}>{review.suggestions}</Text>
                 </View>
               )}
             </View>

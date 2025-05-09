@@ -2,9 +2,11 @@ import { create } from 'zustand';
 
 export interface User {
   id: string;
-  name: string;
+  username: string;
   email: string;
-  // …whatever other fields your User model has
+  resume:any
+  history:any[]
+  credits:number
 }
 
 type State = {

@@ -74,28 +74,30 @@ export default function QuestionsScreen() {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
         playThroughEarpieceAndroid: false,
+        // staysActiveInBackground: true  // Add this to ensure recording continues in background
       });
 
       console.log('Creating new recording...');
       const recording = new Audio.Recording();
       
       await recording.prepareToRecordAsync({
-        isMeteringEnabled: true,
         android: {
           extension: '.m4a',
           outputFormat: Audio.AndroidOutputFormat.MPEG_4,
           audioEncoder: Audio.AndroidAudioEncoder.AAC,
           sampleRate: 44100,
-          numberOfChannels: 2,
+          numberOfChannels: 1,  // Changed to 1 channel for better compatibility
           bitRate: 128000,
         },
         ios: {
           extension: '.m4a',
-          audioQuality: Audio.IOSAudioQuality.HIGH,
+          audioQuality: Audio.IOSAudioQuality.MAX,  // Changed to MAX quality
           sampleRate: 44100,
-          numberOfChannels: 2,
+          numberOfChannels: 1,  // Changed to 1 channel for better compatibility
           bitRate: 128000,
-          outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
+          linearPCMBitDepth: 16,  // Added bit depth
+          linearPCMIsBigEndian: false,  // Added endianness
+          linearPCMIsFloat: false,  // Added float format specification
         },
         web: {
           mimeType: 'audio/webm',
@@ -120,22 +122,27 @@ export default function QuestionsScreen() {
       console.log('Stopping recording...');
       if (!recordingInstance) return;
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
-      
-      await recordingInstance.stopAndUnloadAsync();
+      // Make sure recording is actually recording before stopping
+      const status = await recordingInstance.getStatusAsync();
+      if (!status.isRecording) {
+        console.log('Recording was not active');
+        return;
+      }
 
-     // 📢 Switch back to speaker‑only playback
-     await Audio.setAudioModeAsync({
-        allowsRecordingIOS:false,
-        playsInSilentModeIOS:true,
-        playThroughEarpieceAndroid:false
-     })
+      await recordingInstance.stopAndUnloadAsync();
       const uri = recordingInstance.getURI();
       console.log('Recording stopped, URI:', uri);
       
+      // Verify the recording exists and has content
+      const info = await FileSystem.getInfoAsync(uri!, { size: true });
+      console.log('Recording file info:', info);
+      
+      if (!info.exists || (info.size ?? 0) === 0) {
+        console.error('Recording file is empty or does not exist');
+        Alert.alert('Recording Error', 'Failed to save recording. Please try again.');
+        return;
+      }
+
       if (uri) {
         setRecordings((prev) => [...prev, uri]);
       }
@@ -143,18 +150,22 @@ export default function QuestionsScreen() {
       setRecordingInstance(null);
       setIsRecording(false);
 
+      // Switch back to speaker-only playback
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+        playThroughEarpieceAndroid: false
+      });
 
-       // Automatically advance to the next question
-       if(currentIndex < parsedQuestions.length - 1){
+      // Advance to next question or submit
+      if(currentIndex < parsedQuestions.length - 1) {
         setCurrentIndex(currentIndex + 1);
-       }else{
-
-        submitAll()
-
-       }
+      } else {
+        submitAll();
+      }
    
     } catch (err) {
-      console.error('Failedß to stop recording', err);
+      console.error('Failed to stop recording', err);
       Alert.alert('Recording Error', 'Failed to stop recording.');
     }
   };
@@ -166,20 +177,19 @@ export default function QuestionsScreen() {
     // 1. Inspect on‑disk size for each URI
     for (let i = 0; i < recordings.length; i++) {
       const uri = recordings[i];
-      const info = await FileSystem.getInfoAsync(uri, { size: true });  // get exists + size :contentReference[oaicite:4]{index=4}
-      console.log(`Recording ${i+1}: exists=${info.exists}, size=${info.size} bytes`);
+      const info = await FileSystem.getInfoAsync(uri, { size: true });
+      console.log(`Recording ${i+1}: exists=${info.exists}, size=${(info as any).size ?? 0} bytes`);
       if (!info.exists || (info.size ?? 0) === 0) {
         Alert.alert(
           'Empty Recording',
-          `Recording #${i+1} is empty (${info.size ?? 0} bytes). Please retry.`
+          `Recording #${i+1} is empty (${(info as any).size ?? 0} bytes). Please retry.`
         );
-        return;  // abort if any file is zero‑length
+        return;
       }
     }
   
     console.log('All recordings valid—building FormData…');
   
-    // 2. Build FormData with file descriptors (no blob needed) :contentReference[oaicite:5]{index=5}
     const formData = new FormData();
     formData.append('questions', JSON.stringify(parsedQuestions));
     recordings.forEach((uri, i) => {
@@ -190,25 +200,44 @@ export default function QuestionsScreen() {
       } as any);
     });
   
-    // 3. POST to server (axios/fetch infers boundary) :contentReference[oaicite:6]{index=6}
     try {
+      setIsLoading(true);
       const result: any = await apiRequest({
         method: 'post',
         url: '/interview/submit',
         data: formData,
       });
-      console.log('Server response:', result.data);
+      console.log('Server response:', result);
+      
+      // Remove the .data check since the response is already the data
+      if (!result || !result.success) {
+        throw new Error('Invalid server response format');
+      }
+
+      // Get reviews directly from result since it's already the data object
+      const reviewData = {
+        reviews: result.reviews,
+        questionCount: result.questionCount,
+        transcriptCount: result.transcriptCount
+      };
+      console.log('reviewData', reviewData);
+
       router.replace({
         pathname: '/review',
         params: {
-          data: JSON.stringify(result.data.reviews),
+          data: JSON.stringify(reviewData),
           company,
           role,
         },
       });
     } catch (err: any) {
       console.error('Upload failed:', err);
-      Alert.alert('Upload Failed', err.message || 'Unknown error');
+      Alert.alert(
+        'Upload Failed', 
+        'Failed to process interview. Please try again. ' + (err.message || 'Unknown error')
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
   
