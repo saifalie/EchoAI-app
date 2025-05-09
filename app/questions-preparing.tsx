@@ -3,8 +3,8 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import LottieView from 'lottie-react-native';
 import React, { useEffect, useState } from 'react';
 import { Button, StyleSheet, Text, View } from 'react-native';
+import apiRequest from '../services/apiServices';
 
-// Disable back gesture and hide back button
 export const options = {
   headerBackVisible: false,
   gestureEnabled: false,
@@ -12,47 +12,41 @@ export const options = {
 
 export default function PreparingScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
-  const { company, role, questionType } = params;
+  const { company, role, questionType } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-
   const navigation = useNavigation();
-useEffect(() => {
-  navigation.setOptions({
-    headerShown: false,
-    headerBackVisible: false,
-    gestureEnabled: false,
-  });
-}, [navigation]);
+  useEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+      headerBackVisible: false,
+      gestureEnabled: false,
+    });
+  }, [navigation]);
 
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        // const payload = { company, role, questionType };
-        // const response = await fetch('https://your-api.example.com/questions', {
-        //   method: 'POST',
-        //   headers: { 'Content-Type': 'application/json' },
-        //   body: JSON.stringify(payload),
-        // });
-        // if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        // const data = await response.json();
+        const payload = { company, role, questionType };
+        const data = await apiRequest<any, any>({
+          method: 'post',
+          url: '/interview/questions',
+          data: payload,
+        });
 
-        // Replace this screen in history so user cannot go back
-        // router.replace({
-        //   pathname: '/interview',
-        //   params: { questions: JSON.stringify(data), company, role, questionType },
-
-        setTimeout(() => {
-            router.replace({
-                pathname: '/interview',
-                params: {  company, role, questionType },
-              });
-        }, 3000);
-       
-        // });
+        console.log('questions-data',data);
+        
+        router.replace({
+          pathname: '/interview',
+          params: {
+            questions: JSON.stringify(data.questions),
+            company,
+            role,
+            questionType
+          },
+        });
       } catch (err: any) {
         console.error('Fetch error:', err);
         setError(err.message || 'Unknown error');
@@ -60,7 +54,7 @@ useEffect(() => {
       }
     };
     fetchQuestions();
-  }, []);
+  }, [company, role, questionType, router]);
 
   if (loading) {
     return (

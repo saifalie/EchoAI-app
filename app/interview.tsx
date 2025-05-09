@@ -1,4 +1,5 @@
 // app/(tabs)/QuestionsScreen.tsx
+import apiRequest from '@/services/apiServices';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -18,15 +19,25 @@ import {
 
 export default function QuestionsScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams();
+  const {
+    questions,
+    company,
+    role,
+    questionType
 
-  const questions: string[] = [
-    'Tell me about yourself.',
-    'Why do you want to work here?',
-    'What is your greatest strength?',
-    'Describe a challenge you overcame.',
-    'Where do you see yourself in five years?'
-  ];
+  } = useLocalSearchParams();
+
+  const parsedQuestions = JSON.parse(Array.isArray(questions) ? questions[0] : questions);
+
+
+
+//   const questions: string[] = [
+//     'Tell me about yourself.',
+//     'Why do you want to work here?',
+//     'What is your greatest strength?',
+//     'Describe a challenge you overcame.',
+//     'Where do you see yourself in five years?'
+//   ];
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [recordings, setRecordings] = useState<string[]>([]);
@@ -34,6 +45,7 @@ export default function QuestionsScreen() {
   const [recordingInstance, setRecordingInstance] = useState<Audio.Recording | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
   const [subtitlesVisible, setSubtitlesVisible] = useState(true);
+  const [isLoading,setIsLoading] = useState(false)
 
   useEffect( () => {
     (async () => {
@@ -43,7 +55,7 @@ export default function QuestionsScreen() {
           playsInSilentModeIOS: true,
         });
         // 2) now speak via main speaker
-        Speech.speak(questions[currentIndex], { rate: 0.9 });
+        Speech.speak(parsedQuestions[currentIndex], { rate: 0.9 });
       })();
   }, [currentIndex]);
 
@@ -132,34 +144,32 @@ export default function QuestionsScreen() {
 
 
        // Automatically advance to the next question
-       if(currentIndex < questions.length - 1){
+       if(currentIndex < parsedQuestions.length - 1){
         setCurrentIndex(currentIndex + 1);
        }else{
-        // All questions answered, proceed to submission
-        try {
-            const formData = new FormData()
-            for (let i = 0; i<recordings.length; i++){
-                const response = await fetch(recordings[i])
-                const blob = await response.blob()
-                formData.append('file'+i, blob,`answers${i}.m4a`)
-            }
 
-             // For now, just show success without actual submission
-        Alert.alert('Success', 'Your answers have been submitted.', [
-            { text: 'OK', onPress: () => router.replace('/review') },
-          ]);
+        submitAll()
+        // // All questions answered, proceed to submission
+        // try {
+        //     const formData = new FormData()
+        //     for (let i = 0; i<recordings.length; i++){
+        //         const response = await fetch(recordings[i])
+        //         const blob = await response.blob()
+        //         formData.append('file'+i, blob,`answers${i}.m4a`)
+        //     }
 
-          console.log('formdata:',formData);
-          
+        //      // For now, just show success without actual submission
+        // Alert.alert('Success', 'Your answers have been submitted.', [
+        //     { text: 'OK', onPress: () => router.replace('/review') },
+        //   ]);
 
-
-
+        //   console.log('formdata:');
+   
+        // } catch (error) {
+        //     console.error(error);
+        //     Alert.alert('Error','Failed to submit answers.')
             
-        } catch (error) {
-            console.error(error);
-            Alert.alert('Error','Failed to submit answers.')
-            
-        }
+        // }
        }
    
     } catch (err) {
@@ -167,6 +177,95 @@ export default function QuestionsScreen() {
       Alert.alert('Recording Error', 'Failed to stop recording.');
     }
   };
+
+
+  const submitAll = async() => {
+    try {
+      console.log('Submitting interview answers...');
+      
+      // Show loading indicator
+      setIsLoading(true);
+      
+      // Create FormData object
+      const formData = new FormData();
+      
+      // Add questions as a JSON string
+      formData.append('questions', JSON.stringify(parsedQuestions));
+      
+      // Add each audio recording
+      for (let i = 0; i < recordings.length; i++) {
+        const response = await fetch(recordings[i]);
+        const blob = await response.blob();
+        formData.append('answers', blob, `answer_${i}.m4a`);
+      }
+      
+      console.log(`Submitting ${recordings.length} recordings for ${parsedQuestions.length} questions`);
+      
+      // Send to server
+      const result:any = await apiRequest({
+        method: 'post',
+        url: '/interview/submit',
+        data: formData,
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      console.log('Server response:', result.data);
+      
+      // Hide loading indicator
+      setIsLoading(false);
+      
+      // Navigate to results screen with the analysis data
+      router.replace({
+        pathname: '/review',
+        params: { 
+          data: JSON.stringify(result.data.reviews),
+          company: company,
+          role: role
+        }
+      });
+      
+    } catch (error:any) {
+      console.error('Upload failed:', error);
+      setIsLoading(false);
+      Alert.alert(
+        'Upload Failed', 
+        error.message || 'An unknown error occurred while submitting your interview.'
+      );
+    }
+  }
+
+//   const submitAll = async()  =>{
+//     try {
+//         console.log('submit-all called');
+        
+//         const formData = new FormData()
+//         formData.append('questions',JSON.parse(parsedQuestions))
+//         for (let i=0; i< recordings.length; i++){
+//             const resp = await fetch(recordings[i])
+//             const blob = await resp.blob()
+//             formData.append('answers',blob,`answer_${i}.m4a`)
+
+//         }
+
+//         const server_response:any = await apiRequest<FormData,{urls:string[]}>({
+//             method:'post',
+//             url:'/interview/submit',
+//             data:formData,
+//             headers: { 'Content-Type':'multipart/form-data'}
+//         })
+
+//         console.log('server-response',server_response.data);
+
+//         Alert.alert('Success')
+        
+
+
+        
+//     } catch (error:any) {
+//         console.error(error);
+//         Alert.alert('Upload failed', error.message || 'Unknown error');
+//     }
+//   }
 
   const toggleQuestions = () => {
     setShowQuestions(!showQuestions);
@@ -186,7 +285,7 @@ export default function QuestionsScreen() {
   const onNext = async () => {
     if (isRecording) await stopRecording();
 
-    if (currentIndex < questions.length - 1) {
+    if (currentIndex < parsedQuestions.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       try {
@@ -248,7 +347,7 @@ export default function QuestionsScreen() {
         {/* Question Subtitles */}
         {subtitlesVisible && (
           <View style={styles.subtitlesContainer}>
-            <Text style={styles.subtitlesText}>{questions[currentIndex]}</Text>
+            <Text style={styles.subtitlesText}>{parsedQuestions[currentIndex]}</Text>
           </View>
         )}
 
@@ -284,7 +383,7 @@ export default function QuestionsScreen() {
         
         {showQuestions && (
           <ScrollView style={styles.questionsList}>
-            {questions.map((question, index) => (
+            {parsedQuestions.map((question:any, index:number) => (
               <TouchableOpacity 
                 key={index}
                 style={[
