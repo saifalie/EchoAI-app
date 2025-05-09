@@ -2,19 +2,20 @@
 import apiRequest from '@/services/apiServices';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Speech from 'expo-speech';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function QuestionsScreen() {
@@ -149,27 +150,7 @@ export default function QuestionsScreen() {
        }else{
 
         submitAll()
-        // // All questions answered, proceed to submission
-        // try {
-        //     const formData = new FormData()
-        //     for (let i = 0; i<recordings.length; i++){
-        //         const response = await fetch(recordings[i])
-        //         const blob = await response.blob()
-        //         formData.append('file'+i, blob,`answers${i}.m4a`)
-        //     }
 
-        //      // For now, just show success without actual submission
-        // Alert.alert('Success', 'Your answers have been submitted.', [
-        //     { text: 'OK', onPress: () => router.replace('/review') },
-        //   ]);
-
-        //   console.log('formdata:');
-   
-        // } catch (error) {
-        //     console.error(error);
-        //     Alert.alert('Error','Failed to submit answers.')
-            
-        // }
        }
    
     } catch (err) {
@@ -179,93 +160,61 @@ export default function QuestionsScreen() {
   };
 
 
-  const submitAll = async() => {
-    try {
-      console.log('Submitting interview answers...');
-      
-      // Show loading indicator
-      setIsLoading(true);
-      
-      // Create FormData object
-      const formData = new FormData();
-      
-      // Add questions as a JSON string
-      formData.append('questions', JSON.stringify(parsedQuestions));
-      
-      // Add each audio recording
-      for (let i = 0; i < recordings.length; i++) {
-        const response = await fetch(recordings[i]);
-        const blob = await response.blob();
-        formData.append('answers', blob, `answer_${i}.m4a`);
+  const submitAll = async () => {
+    console.log('Validating recording file sizes…');
+  
+    // 1. Inspect on‑disk size for each URI
+    for (let i = 0; i < recordings.length; i++) {
+      const uri = recordings[i];
+      const info = await FileSystem.getInfoAsync(uri, { size: true });  // get exists + size :contentReference[oaicite:4]{index=4}
+      console.log(`Recording ${i+1}: exists=${info.exists}, size=${info.size} bytes`);
+      if (!info.exists || (info.size ?? 0) === 0) {
+        Alert.alert(
+          'Empty Recording',
+          `Recording #${i+1} is empty (${info.size ?? 0} bytes). Please retry.`
+        );
+        return;  // abort if any file is zero‑length
       }
-      
-      console.log(`Submitting ${recordings.length} recordings for ${parsedQuestions.length} questions`);
-      
-      // Send to server
-      const result:any = await apiRequest({
+    }
+  
+    console.log('All recordings valid—building FormData…');
+  
+    // 2. Build FormData with file descriptors (no blob needed) :contentReference[oaicite:5]{index=5}
+    const formData = new FormData();
+    formData.append('questions', JSON.stringify(parsedQuestions));
+    recordings.forEach((uri, i) => {
+      formData.append('answers', {
+        uri,
+        name: `answer_${i}.m4a`,
+        type: 'audio/m4a',
+      } as any);
+    });
+  
+    // 3. POST to server (axios/fetch infers boundary) :contentReference[oaicite:6]{index=6}
+    try {
+      const result: any = await apiRequest({
         method: 'post',
         url: '/interview/submit',
         data: formData,
-        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      
       console.log('Server response:', result.data);
-      
-      // Hide loading indicator
-      setIsLoading(false);
-      
-      // Navigate to results screen with the analysis data
       router.replace({
         pathname: '/review',
-        params: { 
+        params: {
           data: JSON.stringify(result.data.reviews),
-          company: company,
-          role: role
-        }
+          company,
+          role,
+        },
       });
-      
-    } catch (error:any) {
-      console.error('Upload failed:', error);
-      setIsLoading(false);
-      Alert.alert(
-        'Upload Failed', 
-        error.message || 'An unknown error occurred while submitting your interview.'
-      );
+    } catch (err: any) {
+      console.error('Upload failed:', err);
+      Alert.alert('Upload Failed', err.message || 'Unknown error');
     }
-  }
-
-//   const submitAll = async()  =>{
-//     try {
-//         console.log('submit-all called');
-        
-//         const formData = new FormData()
-//         formData.append('questions',JSON.parse(parsedQuestions))
-//         for (let i=0; i< recordings.length; i++){
-//             const resp = await fetch(recordings[i])
-//             const blob = await resp.blob()
-//             formData.append('answers',blob,`answer_${i}.m4a`)
-
-//         }
-
-//         const server_response:any = await apiRequest<FormData,{urls:string[]}>({
-//             method:'post',
-//             url:'/interview/submit',
-//             data:formData,
-//             headers: { 'Content-Type':'multipart/form-data'}
-//         })
-
-//         console.log('server-response',server_response.data);
-
-//         Alert.alert('Success')
-        
+  };
+  
 
 
-        
-//     } catch (error:any) {
-//         console.error(error);
-//         Alert.alert('Upload failed', error.message || 'Unknown error');
-//     }
-//   }
+
 
   const toggleQuestions = () => {
     setShowQuestions(!showQuestions);
@@ -279,31 +228,6 @@ export default function QuestionsScreen() {
     if (index !== currentIndex) {
       setCurrentIndex(index);
       setShowQuestions(false);
-    }
-  };
-
-  const onNext = async () => {
-    if (isRecording) await stopRecording();
-
-    if (currentIndex < parsedQuestions.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    } else {
-      try {
-        const formData = new FormData();
-        for (let i = 0; i < recordings.length; i++) {
-          const response = await fetch(recordings[i]);
-          const blob = await response.blob();
-          formData.append('file' + i, blob, `answer${i}.m4a`);
-        }
-
-        // For now, just show success without actual submission
-        Alert.alert('Success', 'Your answers have been submitted.', [
-          { text: 'OK', onPress: () => router.replace('/review') }
-        ]);
-      } catch (err) {
-        console.error(err);
-        Alert.alert('Error', 'Failed to submit answers.');
-      }
     }
   };
 
