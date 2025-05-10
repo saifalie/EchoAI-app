@@ -8,6 +8,7 @@ import * as Speech from 'expo-speech';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   SafeAreaView,
@@ -68,6 +69,9 @@ export default function QuestionsScreen() {
 
   const startRecording = async () => {
     try {
+      // Stop any ongoing speech
+      await Speech.stop();
+      
       console.log('Requesting permissions...');
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
@@ -166,6 +170,10 @@ export default function QuestionsScreen() {
       // Advance to next question or submit
       if(currentIndex < parsedQuestions.length - 1) {
         setCurrentIndex(currentIndex + 1);
+        // Small delay before speaking the next question
+        setTimeout(() => {
+          Speech.speak(parsedQuestions[currentIndex + 1], { rate: 0.9 });
+        }, 500);
       } else {
         submitAll();
       }
@@ -270,105 +278,115 @@ export default function QuestionsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>MOCK INTERVIEW</Text>
-        
-        {/* Subtitles Toggle Button */}
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={[styles.subtitlesButton, subtitlesVisible && styles.activeButton]}
-            onPress={toggleSubtitles}
-          >
-            <MaterialIcons name="subtitles" size={18} color="white" />
-            <Text style={styles.subtitlesText}>Subtitles</Text>
-          </TouchableOpacity>
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF5252" />
+          <Text style={styles.loadingText}>Processing your interview...</Text>
+          <Text style={styles.loadingSubtext}>Please wait while we analyze your responses</Text>
+        </View>
+      ) : (
+        <>
+          <StatusBar style="light" />
           
-          <TouchableOpacity 
-        //   onPress={() => router.back()} 
-          style={styles.closeButton}>
-            <MaterialIcons name="close" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
-          <Image 
-            source={require('../assets/images/woman.png')} 
-            style={styles.avatar}
-            defaultSource={require('../assets/images/woman.png')}
-          />
-        </View>
-
-        {/* Question Subtitles */}
-        {subtitlesVisible && (
-          <View style={styles.subtitlesContainer}>
-            <Text style={styles.subtitlesText}>{parsedQuestions[currentIndex]}</Text>
-          </View>
-        )}
-
-        {/* Recording Button */}
-        <TouchableOpacity
-          style={styles.recordButton}
-          onPress={isRecording ? stopRecording : startRecording}
-        >
-          <Text style={styles.recordButtonText}>
-            {isRecording ? 'Tap to Stop' : 'Tap to Start'}
-          </Text>
-          <Ionicons
-            name={isRecording ? 'stop-circle' : 'mic'}
-            size={24}
-            color="white"
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* Questions Panel */}
-      <View style={styles.questionsPanel}>
-        <TouchableOpacity 
-          style={styles.questionsPanelHeader}
-          onPress={toggleQuestions}
-        >
-          <Text style={styles.questionsPanelTitle}>View Questions</Text>
-          <MaterialIcons 
-            name={showQuestions ? "keyboard-arrow-down" : "keyboard-arrow-up"} 
-            size={24} 
-            color="white" 
-          />
-        </TouchableOpacity>
-        
-        {showQuestions && (
-          <ScrollView style={styles.questionsList}>
-            {parsedQuestions.map((question:any, index:number) => (
-              <TouchableOpacity 
-                key={index}
-                style={[
-                  styles.questionItem, 
-                  currentIndex === index && styles.activeQuestionItem
-                ]}
-                onPress={() => goToQuestion(index)}
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>MOCK INTERVIEW</Text>
+            
+            {/* Subtitles Toggle Button */}
+            <View style={styles.headerButtons}>
+              <TouchableOpacity
+                style={[styles.subtitlesButton, subtitlesVisible && styles.activeButton]}
+                onPress={toggleSubtitles}
               >
-                <Text 
-                  style={[
-                    styles.questionItemText,
-                    currentIndex === index && styles.activeQuestionItemText
-                  ]}
-                >
-                  {question}
-                </Text>
-                {recordings[index] && (
-                  <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                )}
+                <MaterialIcons name="subtitles" size={18} color="white" />
+                <Text style={styles.subtitlesText}>Subtitles</Text>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
+              
+              <TouchableOpacity 
+            //   onPress={() => router.back()} 
+              style={styles.closeButton}>
+                <MaterialIcons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Main Content */}
+          <View style={styles.content}>
+            {/* Avatar */}
+            <View style={styles.avatarContainer}>
+              <Image 
+                source={require('../assets/images/woman.png')} 
+                style={styles.avatar}
+                defaultSource={require('../assets/images/woman.png')}
+              />
+            </View>
+
+            {/* Question Subtitles */}
+            {subtitlesVisible && (
+              <View style={styles.subtitlesContainer}>
+                <Text style={styles.subtitlesText}>{parsedQuestions[currentIndex]}</Text>
+              </View>
+            )}
+
+            {/* Recording Button */}
+            <TouchableOpacity
+              style={styles.recordButton}
+              onPress={isRecording ? stopRecording : startRecording}
+            >
+              <Text style={styles.recordButtonText}>
+                {isRecording ? 'Tap to Stop' : 'Tap to Start'}
+              </Text>
+              <Ionicons
+                name={isRecording ? 'stop-circle' : 'mic'}
+                size={24}
+                color="white"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* Questions Panel */}
+          <View style={styles.questionsPanel}>
+            <TouchableOpacity 
+              style={styles.questionsPanelHeader}
+              onPress={toggleQuestions}
+            >
+              <Text style={styles.questionsPanelTitle}>View Questions</Text>
+              <MaterialIcons 
+                name={showQuestions ? "keyboard-arrow-down" : "keyboard-arrow-up"} 
+                size={24} 
+                color="white" 
+              />
+            </TouchableOpacity>
+            
+            {showQuestions && (
+              <ScrollView style={styles.questionsList}>
+                {parsedQuestions.map((question:any, index:number) => (
+                  <TouchableOpacity 
+                    key={index}
+                    style={[
+                      styles.questionItem, 
+                      currentIndex === index && styles.activeQuestionItem
+                    ]}
+                    onPress={() => goToQuestion(index)}
+                  >
+                    <Text 
+                      style={[
+                        styles.questionItemText,
+                        currentIndex === index && styles.activeQuestionItemText
+                      ]}
+                    >
+                      {question}
+                    </Text>
+                    {recordings[index] && (
+                      <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        </>
+      )}
     </SafeAreaView>
   );
 }
@@ -502,5 +520,25 @@ const styles = StyleSheet.create({
   activeQuestionItemText: {
     color: 'white',
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#121212',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

@@ -92,7 +92,7 @@ const ReviewScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.row}>
+        {/* <View style={styles.row}>
           <View style={[styles.card, styles.scoreCard]}>
             <Text style={styles.cardTitle}>Overall Score</Text>
             <Text style={styles.scoreValue}>75/100</Text>
@@ -103,7 +103,7 @@ const ReviewScreen = () => {
             <Text style={styles.emojiRow}>😊 😐 🤔 💪</Text>
             <Text style={styles.scoreLabel}>OK</Text>
           </View>
-        </View>
+        </View> */}
 
         {/* Strengths Section */}
         <View style={[styles.sectionBox, styles.sectionBoxSuccess]}>

@@ -60,19 +60,19 @@ export default function HomeScreen() {
 
         {/* Static Option Cards */}
         <TouchableOpacity
-          onPress={() => router.push('/resume-uploader')}
+          // onPress={() => router.push('/resume-uploader')}
           style={styles.optionCard}
         >
           <View style={{ flex: 1 }}>
-            <Text style={styles.optionTitle}>Build Your Resume PDF For Free</Text>
+            <Text style={styles.optionTitle}>Daily Mock Tracking</Text>
             <Text style={styles.optionSubtitle}>
-              Approved by HRs and takes only 2 mins to export
+              Get your daily tracking of your interview performance
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={26} color="#007AFF" />
         </TouchableOpacity>
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() => router.push('/review')}
           style={styles.optionCard}
         >
@@ -83,9 +83,9 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={26} color="#007AFF" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
-        <TouchableOpacity
+        {/* <TouchableOpacity
           onPress={() => router.push('/review')}
           style={styles.optionCard}
         >
@@ -96,7 +96,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={26} color="#007AFF" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
 
       </ScrollView>
     </SafeAreaView>
