@@ -48,16 +48,22 @@ export default function QuestionsScreen() {
   const [subtitlesVisible, setSubtitlesVisible] = useState(true);
   const [isLoading,setIsLoading] = useState(false)
 
-  useEffect( () => {
+  useEffect(() => {
     (async () => {
-        // 1) turn OFF record mode and wait for it
+      try {
+        // Configure audio mode for speaker output with microphone off
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
+          staysActiveInBackground: true
         });
-        // 2) now speak via main speaker
+
+        // Configure speech options for speaker output
         Speech.speak(parsedQuestions[currentIndex], { rate: 0.9 });
-      })();
+      } catch (error) {
+        console.error('Error configuring audio:', error);
+      }
+    })();
   }, [currentIndex]);
 
   const startRecording = async () => {
@@ -209,16 +215,18 @@ export default function QuestionsScreen() {
       });
       console.log('Server response:', result);
       
-      // Remove the .data check since the response is already the data
-      if (!result || !result.success) {
+      // The response structure is different from what we expected
+      // Let's handle the actual response format
+      if (!result || !result.questionCount || !result.reviews) {
         throw new Error('Invalid server response format');
       }
 
-      // Get reviews directly from result since it's already the data object
+      // Get reviews from the correct path in response
       const reviewData = {
         reviews: result.reviews,
         questionCount: result.questionCount,
-        transcriptCount: result.transcriptCount
+        transcriptCount: result.questionCount, // Using questionCount as transcriptCount
+        reviewId: result.reviewId
       };
       console.log('reviewData', reviewData);
 

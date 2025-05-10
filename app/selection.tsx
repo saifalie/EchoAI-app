@@ -1,7 +1,7 @@
-// app/(tabs)/selection.tsx
+
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const initialCompanies = ['Google', 'Apple', 'Microsoft', 'Amazon', 'Facebook', 'Tesla'];
@@ -20,119 +20,184 @@ const questionTypes = [
   'Strengths & Weaknesses'
 ];
 
+// Define types for the topics structure
+type SubTopics = {
+  [key: string]: string[];
+};
+
+type Topics = {
+  [key: string]: {
+    [key: string]: string[];
+  };
+};
+
+const topics: Topics = {
+  'Technical': {
+    'Programming Languages': ['JavaScript', 'Python', 'Java', 'C++', 'Go'],
+    'Web Development': ['React', 'Angular', 'Vue', 'Node.js', 'Express'],
+    'Database': ['SQL', 'MongoDB', 'Redis', 'PostgreSQL'],
+    'System Design': ['Architecture', 'Scalability', 'Microservices'],
+    'Data Structures': ['Arrays', 'Linked Lists', 'Trees', 'Graphs'],
+    'Algorithms': ['Sorting', 'Searching', 'Dynamic Programming']
+  },
+  'Non-Technical': {
+    'Behavioral': ['Leadership', 'Teamwork', 'Conflict Resolution', 'Problem Solving'],
+    'HR': ['Career Goals', 'Company Knowledge', 'Salary Discussion', 'Work Experience'],
+    'Situational': ['Project Challenges', 'Time Management', 'Decision Making'],
+    'Introduction': ['Self Introduction', 'Background', 'Achievements']
+  }
+};
+
+const difficultyLevels = ['Easy', 'Moderate', 'Hard'] as const;
+type DifficultyLevel = typeof difficultyLevels[number];
+
 export default function SelectionScreen() {
-    const router = useRouter()
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [selectedQuestionType, setSelectedQuestionType] = useState<string | null>(null);
-  const [showMoreCompanies, setShowMoreCompanies] = useState(false);
-  const [showMoreRoles, setShowMoreRoles] = useState(false);
+  const router = useRouter();
+  const [selectedMainTopic, setSelectedMainTopic] = useState<keyof Topics | null>(null);
+  const [selectedSubTopic, setSelectedSubTopic] = useState<string | null>(null);
+  const [selectedSpecific, setSelectedSpecific] = useState<string | null>(null);
+  const [selectedDifficulty, setSelectedDifficulty] = useState<DifficultyLevel | null>(null);
 
-  const companies = showMoreCompanies ? [...initialCompanies, ...moreCompanies] : initialCompanies;
-  const roles = showMoreRoles ? [...initialRoles, ...moreRoles] : initialRoles;
-
-
-  const onProceed = () =>{
-    router.replace({
+  const onProceed = () => {
+    if (selectedMainTopic && selectedSubTopic && selectedSpecific && selectedDifficulty) {
+      router.replace({
         pathname: '/questions-preparing',
         params: {
-          company: selectedCompany!,
-          role: selectedRole!,
-          questionType: selectedQuestionType!
+          mainTopic: selectedMainTopic,
+          subTopic: selectedSubTopic,
+          specific: selectedSpecific,
+          difficulty: selectedDifficulty
         }
       });
-  }
-
-  useEffect(() => {
-    if (selectedCompany && !companies.includes(selectedCompany)) {
-      setShowMoreCompanies(true);
     }
-  }, [selectedCompany]);
+  };
 
-  useEffect(() => {
-    if (selectedRole && !roles.includes(selectedRole)) {
-      setShowMoreRoles(true);
+  const resetSelections = (level: 'main' | 'sub' | 'specific' | 'none') => {
+    if (level === 'main') {
+      setSelectedSubTopic(null);
+      setSelectedSpecific(null);
+    } else if (level === 'sub') {
+      setSelectedSpecific(null);
     }
-  }, [selectedRole]);
+    setSelectedDifficulty(null);
+  };
 
   return (
-    <SafeAreaView style={styles.safe}> 
+    <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Choose Your Target</Text>
+        <Text style={styles.title}>Choose Interview Topic</Text>
 
-        <Text style={styles.subtitle}>Select Company</Text>
+        {/* Main Topics */}
+        <Text style={styles.subtitle}>Select Category</Text>
         <View style={styles.bubbleContainer}>
-          {companies.map((comp) => {
-            const selected = comp === selectedCompany;
+          {Object.keys(topics).map((topic) => {
+            const selected = topic === selectedMainTopic;
             return (
               <TouchableOpacity
-                key={comp}
+                key={topic}
                 style={[styles.bubble, selected && styles.bubbleSelected]}
-                onPress={() => setSelectedCompany(selected ? null : comp)}
+                onPress={() => {
+                  setSelectedMainTopic(selected ? null : topic);
+                  resetSelections('main');
+                }}
               >
                 <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
-                  {comp}
+                  {topic}
                 </Text>
-                {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>} 
-              </TouchableOpacity>
-            );
-          })}
-          {!showMoreCompanies && (
-            <TouchableOpacity style={styles.moreButton} onPress={() => setShowMoreCompanies(true)}>
-              <Text style={styles.moreText}>+ More</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Text style={styles.subtitle}>Select Role</Text>
-        <View style={styles.bubbleContainer}>
-          {roles.map((role) => {
-            const selected = role === selectedRole;
-            return (
-              <TouchableOpacity
-                key={role}
-                style={[styles.bubble, selected && styles.bubbleSelected]}
-                onPress={() => setSelectedRole(selected ? null : role)}
-              >
-                <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
-                  {role}
-                </Text>
-                {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>} 
-              </TouchableOpacity>
-            );
-          })}
-          {!showMoreRoles && (
-            <TouchableOpacity style={styles.moreButton} onPress={() => setShowMoreRoles(true)}>
-              <Text style={styles.moreText}>+ More</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        <Text style={styles.subtitle}>Select Question Type</Text>
-        <View style={styles.bubbleContainer}>
-          {questionTypes.map((type) => {
-            const selected = type === selectedQuestionType;
-            return (
-              <TouchableOpacity
-                key={type}
-                style={[styles.bubble, selected && styles.bubbleSelected]}
-                onPress={() => setSelectedQuestionType(selected ? null : type)}
-              >
-                <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
-                  {type}
-                </Text>
-                {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>} 
+                {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>}
               </TouchableOpacity>
             );
           })}
         </View>
+
+        {/* Sub Topics */}
+        {selectedMainTopic && (
+          <>
+            <Text style={styles.subtitle}>Select Topic</Text>
+            <View style={styles.bubbleContainer}>
+              {Object.keys(topics[selectedMainTopic]).map((subTopic) => {
+                const selected = subTopic === selectedSubTopic;
+                return (
+                  <TouchableOpacity
+                    key={subTopic}
+                    style={[styles.bubble, selected && styles.bubbleSelected]}
+                    onPress={() => {
+                      setSelectedSubTopic(selected ? null : subTopic);
+                      resetSelections('sub');
+                    }}
+                  >
+                    <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
+                      {subTopic}
+                    </Text>
+                    {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* Specific Topics */}
+        {selectedMainTopic && selectedSubTopic && (
+          <>
+            <Text style={styles.subtitle}>Select Specific Area</Text>
+            <View style={styles.bubbleContainer}>
+              {topics[selectedMainTopic][selectedSubTopic].map((specific) => {
+                const selected = specific === selectedSpecific;
+                return (
+                  <TouchableOpacity
+                    key={specific}
+                    style={[styles.bubble, selected && styles.bubbleSelected]}
+                    onPress={() => {
+                      setSelectedSpecific(selected ? null : specific);
+                      setSelectedDifficulty(null);
+                    }}
+                  >
+                    <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
+                      {specific}
+                    </Text>
+                    {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* Difficulty Level */}
+        {selectedSpecific && (
+          <>
+            <Text style={styles.subtitle}>Select Difficulty</Text>
+            <View style={styles.bubbleContainer}>
+              {difficultyLevels.map((level) => {
+                const selected = level === selectedDifficulty;
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.bubble, selected && styles.bubbleSelected]}
+                    onPress={() => setSelectedDifficulty(selected ? null : level)}
+                  >
+                    <Text style={[styles.bubbleText, selected && styles.bubbleTextSelected]}>
+                      {level}
+                    </Text>
+                    {selected && <Ionicons name="checkmark-circle" size={16} color="#fff" style={styles.checkIcon}/>}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </>
+        )}
 
         <TouchableOpacity
-          style={[styles.nextButton, !(selectedCompany && selectedRole && selectedQuestionType) && styles.nextDisabled]}
-          disabled={!(selectedCompany && selectedRole && selectedQuestionType)}
+          style={[
+            styles.nextButton,
+            !(selectedMainTopic && selectedSubTopic && selectedSpecific && selectedDifficulty) && 
+            styles.nextDisabled
+          ]}
+          disabled={!(selectedMainTopic && selectedSubTopic && selectedSpecific && selectedDifficulty)}
           onPress={onProceed}
         >
-          <Text style={styles.nextText}>Next</Text>
+          <Text style={styles.nextText}>Start Interview</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

@@ -43,7 +43,7 @@ export default function HomeScreen() {
         {/* Coach Card */}
         <View style={styles.coachCard}>
           <View style={styles.coachRow}>
-            <Image source={require('../../assets/images/sample_resume.jpeg')} style={styles.coachImage} />
+            <Image source={require('../../assets/images/sweet_girl.png')} style={styles.coachImage} />
             <View style={styles.coachTextContainer}>
               <Text style={styles.coachName}>Hi, I’m Arya</Text>
               <Text style={styles.coachSubtitle}>your Interview coach!</Text>

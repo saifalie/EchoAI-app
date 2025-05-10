@@ -1,14 +1,16 @@
-import { MaterialIcons } from '@expo/vector-icons'
-import { useLocalSearchParams } from 'expo-router'
-import React, { useState } from 'react'
+import { MaterialIcons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useState } from 'react';
 import {
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native'
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const strengths = [
   "Demonstrated strong knowledge in Flutter application development, particularly in integrating APIs and managing state with provider state management.",
@@ -40,6 +42,10 @@ const questions = [
 const ReviewScreen = () => {
   const { data } = useLocalSearchParams();
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Parse the data correctly and get the reviews array
   const parsedData = JSON.parse(Array.isArray(data) ? data[0] : data);
@@ -49,40 +55,79 @@ const ReviewScreen = () => {
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
-  // Calculate average rating - now with proper null checks
-  const averageRating = reviews?.reduce((acc: number, curr: any) => {
-    const rating = parseInt(curr.rating.split('/')[0]);
-    return acc + rating;
-  }, 0) / (reviews?.length || 1);
-
-  // Get overall sentiment based on average rating
-  const getSentiment = (rating: number) => {
-    if (rating >= 8) return { emoji: "😊 🌟 💪 💯", label: "Excellent" };
-    if (rating >= 6) return { emoji: "🙂 👍 💪", label: "Good" };
-    if (rating >= 4) return { emoji: "😐 💭 📝", label: "Needs Improvement" };
-    return { emoji: "😅 📚 💡", label: "Requires Attention" };
+  // Remove rating calculation since it's not in the response
+  const getSentiment = () => {
+    return { 
+      emoji: "🎯 💡 📝", 
+      label: "Interview Complete" 
+    };
   };
   
-  const sentiment = getSentiment(averageRating);
+  const sentiment = getSentiment();
+
+  const stopSound = async () => {
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
+      setIsPlaying(false);
+      setCurrentPlayingIndex(null);
+    }
+  };
+
+  const playAudio = async (audioUrl: string, index: number) => {
+
+    try {
+      setIsLoading(true);
+      // Stop any currently playing audio
+      await stopSound();
+
+      // Load and play the new audio
+      const { sound: newSound } = await Audio.Sound.createAsync(
+        { uri: audioUrl },
+        { shouldPlay: true }
+      );
+      setSound(newSound);
+      setIsPlaying(true);
+      setCurrentPlayingIndex(index);
+
+      // Handle audio finish
+      newSound.setOnPlaybackStatusUpdate(async (status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          await stopSound();
+        }
+      });
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePlayPause = async (audioUrl: string, index: number) => {
+    if (isPlaying && currentPlayingIndex === index) {
+      await stopSound();
+    } else {
+      await playAudio(audioUrl, index);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen}>
-      {/* Fixed Header */}
       <View style={styles.fixedHeader}>
         <Text style={styles.headerText}>Interview Result 📊</Text>
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Score and Sentiment */}
+        {/* Update cards to show question count instead of score */}
         <View style={styles.row}>
           <View style={[styles.card, styles.scoreCard]}>
-            <Text style={styles.cardTitle}>Overall Score</Text>
-            <Text style={styles.scoreValue}>{Math.round(averageRating)}/10</Text>
-            <Text style={styles.scoreLabel}>{sentiment.label}</Text>
+            <Text style={styles.cardTitle}>Questions Answered</Text>
+            <Text style={styles.scoreValue}>{parsedData.questionCount}</Text>
+            <Text style={styles.scoreLabel}>Questions</Text>
           </View>
           <View style={[styles.card, styles.sentimentCard]}>
-            <Text style={styles.cardTitle}>Overall Sentiment</Text>
+            <Text style={styles.cardTitle}>Analysis Complete</Text>
             <Text style={styles.emojiRow}>{sentiment.emoji}</Text>
             <Text style={styles.scoreLabel}>{sentiment.label}</Text>
           </View>
@@ -103,12 +148,38 @@ const ReviewScreen = () => {
               </TouchableOpacity>
               {expandedIndex === index && (
                 <View style={styles.answerBox}>
-                  <Text style={styles.answerLabel}>Analysis:</Text>
-                  <Text style={styles.answerText}>{review.analysis}</Text>
-                  <Text style={styles.answerLabel}>Rating:</Text>
-                  <Text style={styles.answerText}>{review.rating}</Text>
-                  <Text style={styles.answerLabel}>Suggestions:</Text>
-                  <Text style={styles.answerText}>{review.suggestions}</Text>
+                  <View style={styles.audioPlayerContainer}>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        console.log('audioUrl: ', review.audio);
+                        
+                        togglePlayPause(review.audio, index)}}
+                      style={styles.playButton}
+                      disabled={isLoading || !review.audio}
+                    >
+                      {isLoading && currentPlayingIndex === index ? (
+                        <ActivityIndicator color="#333" />
+                      ) : (
+                        <MaterialIcons
+                          name={isPlaying && currentPlayingIndex === index ? 'pause' : 'play-arrow'}
+                          size={24}
+                          color="#333"
+                        />
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.audioLabel}>
+                      {review.audio ? 'Your Answer Recording' : 'No recording available'}
+                    </Text>
+                  </View>
+                  
+                  <Text style={styles.answerLabel}>Your Answer:</Text>
+                  <Text style={styles.answerText}>{review.answer}</Text>
+                  
+                  <Text style={styles.answerLabel}>Feedback:</Text>
+                  <Text style={styles.answerText}>{review.feedback}</Text>
+                  
+                  <Text style={styles.answerLabel}>Ideal Answer:</Text>
+                  <Text style={styles.answerText}>{review.idealAnswer}</Text>
                 </View>
               )}
             </View>
@@ -116,8 +187,8 @@ const ReviewScreen = () => {
         </View>
       </ScrollView>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   screen: {
@@ -246,7 +317,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#333'
+  },
+  audioPlayerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    marginTop: 8
+  },
+  playButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+  },
+  audioLabel: {
+    fontSize: 14,
+    color: '#666',
+    flex: 1,
+    marginLeft: 4
   }
-})
+});
 
-export default ReviewScreen
+export default ReviewScreen;

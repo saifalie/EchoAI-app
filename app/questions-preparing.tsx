@@ -12,7 +12,7 @@ export const options = {
 
 export default function PreparingScreen() {
   const router = useRouter();
-  const { company, role, questionType } = useLocalSearchParams();
+  const { mainTopic, subTopic, specific, difficulty } = useLocalSearchParams();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,22 +29,28 @@ export default function PreparingScreen() {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const payload = { company, role, questionType };
+        const payload = { 
+          mainTopic, 
+          subTopic, 
+          specific,
+          difficulty 
+        };
         const data = await apiRequest<any, any>({
           method: 'post',
           url: '/interview/questions',
           data: payload,
         });
 
-        console.log('questions-data',data);
+        console.log('questions-data', data);
         
         router.replace({
           pathname: '/interview',
           params: {
             questions: JSON.stringify(data.questions),
-            company,
-            role,
-            questionType
+            mainTopic,
+            subTopic,
+            specific,
+            difficulty
           },
         });
       } catch (err: any) {
@@ -54,7 +60,7 @@ export default function PreparingScreen() {
       }
     };
     fetchQuestions();
-  }, [company, role, questionType, router]);
+  }, [mainTopic, subTopic, specific, difficulty, router]);
 
   if (loading) {
     return (
@@ -65,7 +71,10 @@ export default function PreparingScreen() {
           loop
           style={styles.lottie}
         />
-        <Text style={styles.message}>Preparing your questions…</Text>
+        <Text style={styles.message}>
+          Preparing your {mainTopic} interview questions for {subTopic} ({specific})...
+        </Text>
+        <Text style={styles.submessage}>Difficulty: {difficulty}</Text>
       </View>
     );
   }
@@ -73,10 +82,13 @@ export default function PreparingScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.error}>Failed to load questions: {error}</Text>
-      <Button title="Try Again" onPress={() => {
-        setError(null);
-        setLoading(true);
-      }} />
+      <Button 
+        title="Try Again" 
+        onPress={() => {
+          setError(null);
+          setLoading(true);
+        }} 
+      />
     </View>
   );
 }
@@ -97,6 +109,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     fontSize: 16,
     color: '#333',
+    textAlign: 'center',
+  },
+  submessage: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
   error: {
     fontSize: 16,
