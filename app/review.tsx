@@ -4,6 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -11,33 +12,6 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-
-const strengths = [
-  "Demonstrated strong knowledge in Flutter application development, particularly in integrating APIs and managing state with provider state management.",
-  "Experienced in using OOP concepts such as abstraction, inheritance, and encapsulation in real-world projects.",
-  "Proficient in exception handling within Flutter, effectively using try-catch blocks for error management.",
-  "Able to articulate project experiences and technical implementations clearly."
-]
-
-const improvements = [
-  "Lacks a solid understanding of SOLID principles, a fundamental aspect for quality software development.",
-  "Needs to improve understanding and application of Dart Mixin, which is critical for effective Flutter development.",
-  "Could benefit from deeper exposure to different Dart language features and data structures to enhance coding proficiency.",
-  "Could benefit from gaining clarity on implementing Industry-standard best practices overall in the development process."
-]
-
-const questions = [
-  {
-    question: "Describe a project where you extensively used Dart.",
-    answer: "I worked on a ride-sharing app where I used Dart to handle navigation, state, and API data parsing.",
-    feedback: "The candidate explained a mobile app project, showcasing confidence in using Dart for navigation and data models."
-  },
-  {
-    question: "How do you apply OOP principles in Flutter development?",
-    answer: "I use classes and inheritance to create reusable widgets, and abstract classes for service layers.",
-    feedback: "Candidate mentioned using inheritance and abstraction in widget design. Could elaborate further on polymorphism usage."
-  }
-]
 
 const ReviewScreen = () => {
   const { data } = useLocalSearchParams();
@@ -47,7 +21,6 @@ const ReviewScreen = () => {
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Parse the data correctly and get the reviews array
   const parsedData = JSON.parse(Array.isArray(data) ? data[0] : data);
   const reviews = parsedData.reviews;
 
@@ -119,21 +92,54 @@ const ReviewScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* Update cards to show question count instead of score */}
         <View style={styles.row}>
           <View style={[styles.card, styles.scoreCard]}>
-            <Text style={styles.cardTitle}>Questions Answered</Text>
-            <Text style={styles.scoreValue}>{parsedData.questionCount}</Text>
-            <Text style={styles.scoreLabel}>Questions</Text>
+            <Text style={styles.cardTitle}>Overall Score</Text>
+            <Text style={styles.scoreValue}>75/100</Text>
+            <Text style={styles.scoreLabel}>Excellent</Text>
           </View>
           <View style={[styles.card, styles.sentimentCard]}>
-            <Text style={styles.cardTitle}>Analysis Complete</Text>
-            <Text style={styles.emojiRow}>{sentiment.emoji}</Text>
-            <Text style={styles.scoreLabel}>{sentiment.label}</Text>
+            <Text style={styles.cardTitle}>Overall Sentiment</Text>
+            <Text style={styles.emojiRow}>😊 😐 🤔 💪</Text>
+            <Text style={styles.scoreLabel}>OK</Text>
           </View>
         </View>
 
-        {/* Questions with Answer & Feedback */}
+        {/* Strengths Section */}
+        <View style={[styles.sectionBox, styles.sectionBoxSuccess]}>
+          <Text style={styles.sectionTitle}>Areas of Strength</Text>
+          {reviews.map((review: any, index: number) => (
+            <View key={`strength-${index}`} style={styles.bulletRow}>
+              <MaterialIcons name="check-circle" size={20} color="#15803d" />
+              <Text style={styles.bulletText}>{review.feedback.split('.')[0]}.</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Improvements Section */}
+        <View style={[styles.sectionBox, styles.sectionBoxWarning]}>
+          <Text style={styles.sectionTitle}>Areas to Improve</Text>
+          {reviews.map((review: any, index: number) => (
+            <View key={`improvement-${index}`} style={styles.bulletRow}>
+              <MaterialIcons name="error-outline" size={20} color="#dc2626" />
+              <Text style={styles.bulletText}>{review.idealAnswer.split('.')[0]}.</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* Suggestions Section */}
+        <View style={[styles.sectionBox, styles.sectionBoxPrimary]}>
+          <Text style={styles.sectionTitle}>Suggested Resources</Text>
+          <TouchableOpacity 
+            style={styles.resourceLink}
+            onPress={() => Linking.openURL('https://www.coursera.org/learn/technical-communication')}
+          >
+            <MaterialIcons name="school" size={20} color="#0369a1" />
+            <Text style={styles.resourceText}>Practice Technical Communication</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Questions with Evaluation */}
         <View style={styles.sectionBox}>
           <Text style={styles.sectionTitle}>Questions with Evaluation</Text>
           {reviews.map((review: any, index: number) => (
@@ -211,6 +217,30 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 40
   },
+  sectionBoxPrimary: {
+    backgroundColor: '#e0f0fa',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
+  },
+  sectionBoxSuccess: {
+    backgroundColor: '#dcfce7',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
+  },
+  sectionBoxWarning: {
+    backgroundColor: '#ffe2e2',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
+  },
+  sectionBox: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16
+  },
   sectionBoxBlue: {
     backgroundColor: '#e0f0fa',
     borderRadius: 12,
@@ -229,12 +259,12 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16
   },
-  sectionBox: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 16
-  },
+  // sectionBox: {
+  //   backgroundColor: '#f3f4f6',
+  //   borderRadius: 12,
+  //   padding: 14,
+  //   marginBottom: 16
+  // },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -349,6 +379,20 @@ const styles = StyleSheet.create({
     color: '#666',
     flex: 1,
     marginLeft: 4
+  },
+  resourceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    backgroundColor: '#f0f9ff',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  resourceText: {
+    marginLeft: 12,
+    color: '#0369a1',
+    fontSize: 14,
+    fontWeight: '500',
   }
 });
 
