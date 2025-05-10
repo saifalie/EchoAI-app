@@ -1,7 +1,7 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -21,8 +21,19 @@ const ReviewScreen = () => {
   const [currentPlayingIndex, setCurrentPlayingIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // Parse the data from params
   const parsedData = JSON.parse(Array.isArray(data) ? data[0] : data);
   const reviews = parsedData.reviews;
+  const questionDetails = parsedData.questionDetails || [];
+
+  // Effect to clean up audio when component unmounts
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
   const toggleExpand = (index: number) => {
     setExpandedIndex(expandedIndex === index ? null : index);
@@ -49,17 +60,19 @@ const ReviewScreen = () => {
   };
 
   const playAudio = async (audioUrl: string, index: number) => {
-
     try {
       setIsLoading(true);
       // Stop any currently playing audio
       await stopSound();
+
+      console.log("Playing audio from URL:", audioUrl);
 
       // Load and play the new audio
       const { sound: newSound } = await Audio.Sound.createAsync(
         { uri: audioUrl },
         { shouldPlay: true }
       );
+      
       setSound(newSound);
       setIsPlaying(true);
       setCurrentPlayingIndex(index);
@@ -70,19 +83,40 @@ const ReviewScreen = () => {
           await stopSound();
         }
       });
-    } catch (error) {
+    } catch (error:any) {
       console.error('Error playing audio:', error);
+      alert(`Error playing audio: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
   const togglePlayPause = async (audioUrl: string, index: number) => {
+    if (!audioUrl) {
+      alert('No audio recording available for this answer');
+      return;
+    }
+    
     if (isPlaying && currentPlayingIndex === index) {
       await stopSound();
     } else {
       await playAudio(audioUrl, index);
     }
+  };
+
+  // Function to get audio URL for a question
+  const getAudioUrl = (index: number) => {
+    // First try to get from questionDetails array
+    if (questionDetails && questionDetails[index] && questionDetails[index].audioUrl) {
+      return questionDetails[index].audioUrl;
+    }
+    
+    // If not found, check if the review itself has the audio property
+    if (reviews[index] && reviews[index].audio) {
+      return reviews[index].audio;
+    }
+    
+    return null;
   };
 
   return (
@@ -92,7 +126,7 @@ const ReviewScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.container}>
-        {/* <View style={styles.row}>
+        <View style={styles.row}>
           <View style={[styles.card, styles.scoreCard]}>
             <Text style={styles.cardTitle}>Overall Score</Text>
             <Text style={styles.scoreValue}>75/100</Text>
@@ -103,7 +137,7 @@ const ReviewScreen = () => {
             <Text style={styles.emojiRow}>😊 😐 🤔 💪</Text>
             <Text style={styles.scoreLabel}>OK</Text>
           </View>
-        </View> */}
+        </View>
 
         {/* Strengths Section */}
         <View style={[styles.sectionBox, styles.sectionBoxSuccess]}>
@@ -142,54 +176,55 @@ const ReviewScreen = () => {
         {/* Questions with Evaluation */}
         <View style={styles.sectionBox}>
           <Text style={styles.sectionTitle}>Questions with Evaluation</Text>
-          {reviews.map((review: any, index: number) => (
-            <View key={index} style={styles.questionBox}>
-              <TouchableOpacity onPress={() => toggleExpand(index)} style={styles.questionRow}>
-                <Text style={styles.question}>Q{index + 1}. {review.question}</Text>
-                <MaterialIcons
-                  name={expandedIndex === index ? 'expand-less' : 'expand-more'}
-                  size={22}
-                  color="#333"
-                />
-              </TouchableOpacity>
-              {expandedIndex === index && (
-                <View style={styles.answerBox}>
-                  <View style={styles.audioPlayerContainer}>
-                    <TouchableOpacity 
-                      onPress={() => {
-                        console.log('audioUrl: ', review.audio);
-                        
-                        togglePlayPause(review.audio, index)}}
-                      style={styles.playButton}
-                      disabled={isLoading || !review.audio}
-                    >
-                      {isLoading && currentPlayingIndex === index ? (
-                        <ActivityIndicator color="#333" />
-                      ) : (
-                        <MaterialIcons
-                          name={isPlaying && currentPlayingIndex === index ? 'pause' : 'play-arrow'}
-                          size={24}
-                          color="#333"
-                        />
-                      )}
-                    </TouchableOpacity>
-                    <Text style={styles.audioLabel}>
-                      {review.audio ? 'Your Answer Recording' : 'No recording available'}
-                    </Text>
+          {reviews.map((review: any, index: number) => {
+            const audioUrl = getAudioUrl(index);
+            
+            return (
+              <View key={index} style={styles.questionBox}>
+                <TouchableOpacity onPress={() => toggleExpand(index)} style={styles.questionRow}>
+                  <Text style={styles.question}>Q{index + 1}. {review.question}</Text>
+                  <MaterialIcons
+                    name={expandedIndex === index ? 'expand-less' : 'expand-more'}
+                    size={22}
+                    color="#333"
+                  />
+                </TouchableOpacity>
+                {expandedIndex === index && (
+                  <View style={styles.answerBox}>
+                    <View style={styles.audioPlayerContainer}>
+                      <TouchableOpacity 
+                        onPress={() => togglePlayPause(audioUrl, index)}
+                        style={[styles.playButton, !audioUrl && styles.playButtonDisabled]}
+                        disabled={isLoading || !audioUrl}
+                      >
+                        {isLoading && currentPlayingIndex === index ? (
+                          <ActivityIndicator color="#333" />
+                        ) : (
+                          <MaterialIcons
+                            name={isPlaying && currentPlayingIndex === index ? 'pause' : 'play-arrow'}
+                            size={24}
+                            color={audioUrl ? "#333" : "#aaa"}
+                          />
+                        )}
+                      </TouchableOpacity>
+                      <Text style={styles.audioLabel}>
+                        {audioUrl ? 'Your Answer Recording' : 'No recording available'}
+                      </Text>
+                    </View>
+                    
+                    <Text style={styles.answerLabel}>Your Answer:</Text>
+                    <Text style={styles.answerText}>{review.answer}</Text>
+                    
+                    <Text style={styles.answerLabel}>Feedback:</Text>
+                    <Text style={styles.answerText}>{review.feedback}</Text>
+                    
+                    <Text style={styles.answerLabel}>Ideal Answer:</Text>
+                    <Text style={styles.answerText}>{review.idealAnswer}</Text>
                   </View>
-                  
-                  <Text style={styles.answerLabel}>Your Answer:</Text>
-                  <Text style={styles.answerText}>{review.answer}</Text>
-                  
-                  <Text style={styles.answerLabel}>Feedback:</Text>
-                  <Text style={styles.answerText}>{review.feedback}</Text>
-                  
-                  <Text style={styles.answerLabel}>Ideal Answer:</Text>
-                  <Text style={styles.answerText}>{review.idealAnswer}</Text>
-                </View>
-              )}
-            </View>
-          ))}
+                )}
+              </View>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -259,12 +294,6 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 16
   },
-  // sectionBox: {
-  //   backgroundColor: '#f3f4f6',
-  //   borderRadius: 12,
-  //   padding: 14,
-  //   marginBottom: 16
-  // },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -373,6 +402,10 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.2,
     shadowRadius: 1.41,
+  },
+  playButtonDisabled: {
+    backgroundColor: '#f0f0f0',
+    opacity: 0.7
   },
   audioLabel: {
     fontSize: 14,
